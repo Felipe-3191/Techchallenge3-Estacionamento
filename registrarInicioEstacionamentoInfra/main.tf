@@ -2,49 +2,72 @@ provider "aws" {
   region = "us-east-1" 
 }
 
-
 resource "aws_iam_role_policy" "lambdasqs_policy" {
   name = "lambdasqs_policy"
   role = aws_iam_role.lambda_role_write_to_sqs.id
   policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        "Resource" : "*"
+      }]
+})
+}
+
+{
     "Version": "2012-10-17",
     "Statement": [
         {
+            "Sid": "ReadWriteTable",
             "Effect": "Allow",
             "Action": [
-                "sqs:SendMessage",
-                "sqs:ReceiveMessage",
-                "sqs:DeleteMessage",
-                "sqs:GetQueueAttributes",
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
+                "dynamodb:BatchGetItem",
+                "dynamodb:GetItem",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
             ],
-            "Resource": "*"
+            "Resource": "arn:aws:dynamodb:*:*:table/SampleTable"
+        },
+        {
+            "Sid": "GetStreamRecords",
+            "Effect": "Allow",
+            "Action": "dynamodb:GetRecords",
+            "Resource": "arn:aws:dynamodb:*:*:table/SampleTable/stream/* "
         }
-    ]
-})
-}
+
 
 resource "aws_iam_role" "lambda_role_write_to_sqs" {
   name = "lambda-role-write-to-sqs"
 
   assume_role_policy = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "sts:AssumeRole"
-            ],
-            "Principal": {
-                "Service": [
-                    "lambda.amazonaws.com"
-                ]
-            }
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "sts:AssumeRole"
+        ],
+        "Principal" : {
+          "Service" : [
+            "lambda.amazonaws.com"
+          ]
         }
+      }
     ]
-})
+  })
 }
 
 
@@ -53,33 +76,33 @@ resource "aws_lambda_function" "lambda_write_to_sqs" {
   handler       = "com.fiap.techChallenge3.registroSQS.SQSPublisher::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = "" # Coloque o Caminho do seu pacote lambda aqui
-  memory_size = 256
-  timeout = 30
+  filename      = "" # trocar pelo caminho do jar da lambda
+  memory_size   = 256
+  timeout       = 30
   environment {
     variables = {
-      SQS_QUEUE_URL = aws_sqs_queue.example_queue.id
+      SQS_QUEUE_URL = aws_sqs_queue.park_register_queue.id
     }
   }
 }
 
 
-resource "aws_sqs_queue" "example_queue" {
+resource "aws_sqs_queue" "park_register_queue" {
   name                       = "example-queue"
-  delay_seconds              = 0
-  max_message_size           = 256000
-  message_retention_seconds  = 345600 # 4 dias
+  delay_seconds              = 90
+  max_message_size           = 4096
+  message_retention_seconds  = 86400 # 1 dia
   visibility_timeout_seconds = 30
   fifo_queue                 = false
 }
 
 variable "myregion" {
-  type = string 
+  type    = string
   default = "us-east-1"
 }
 
 variable "accountId" {
-  type = string
+  type    = string
   default = "659214650186"
 }
 
@@ -118,3 +141,68 @@ resource "aws_lambda_permission" "apigw_lambda" {
 
   source_arn = "arn:aws:execute-api:${var.myregion}:${var.accountId}:${aws_api_gateway_rest_api.parquimetro_api.id}/*/${aws_api_gateway_method.method.http_method}${aws_api_gateway_resource.pagamento_resource.path}"
 }
+
+resource "aws_dynamodb_table" "registro-estacionamento-table" {
+  name           = "Estacionamento"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 10
+  write_capacity = 10
+  hash_key       = "TicketId"
+  range_key      = "PagamentoRealizado"
+
+  attribute {
+    name = "TicketId"
+    type = "S"
+  }
+
+  attribute {
+    name = "PagamentoRealizado"
+    type = "S"
+  }
+
+  attribute {
+    name = "DataEntrada"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = false
+  }
+
+global_secondary_index {
+  name               = "estacionamento-por-status-data-indice"
+  hash_key           = "PagamentoRealizado"
+  range_key          = "DataEntrada"
+  write_capacity     = 10
+  read_capacity      = 10
+  projection_type    = "INCLUDE"
+  non_key_attributes = ["UserId"]
+}
+}
+
+
+resource "aws_lambda_function" "lambda_read_from_sqs" {
+  function_name = "lambda-read-from-sqs"
+  handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.SQSListener::handleRequest"
+  runtime       = "java17"
+  role          = aws_iam_role.lambda_role_write_to_sqs.arn
+  filename      = "" # trocar pelo caminho do pacote da lambda de ler da fila 
+  memory_size   = 256
+  timeout       = 30
+}
+
+resource "aws_lambda_event_source_mapping" "event_source_mapping" {
+  event_source_arn = aws_sqs_queue.park_register_queue.arn
+  enabled          = true
+  function_name    = aws_lambda_function.lambda_read_from_sqs.arn
+  batch_size       = 1
+}
+
+
+
+
+
+
+
+
