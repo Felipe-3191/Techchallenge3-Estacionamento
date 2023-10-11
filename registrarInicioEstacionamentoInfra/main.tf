@@ -2,6 +2,7 @@ provider "aws" {
   region = "us-east-1" 
 }
 
+
 resource "aws_iam_role_policy" "lambdasqs_policy" {
   name = "lambdasqs_policy"
   role = aws_iam_role.lambda_role_write_to_sqs.id
@@ -20,14 +21,8 @@ resource "aws_iam_role_policy" "lambdasqs_policy" {
           "logs:PutLogEvents"
         ],
         "Resource" : "*"
-      }]
-})
-}
-
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
+      },    
+      {
             "Sid": "ReadWriteTable",
             "Effect": "Allow",
             "Action": [
@@ -39,16 +34,19 @@ resource "aws_iam_role_policy" "lambdasqs_policy" {
                 "dynamodb:PutItem",
                 "dynamodb:UpdateItem"
             ],
-            "Resource": "arn:aws:dynamodb:*:*:table/SampleTable"
+            "Resource": "*"
         },
         {
             "Sid": "GetStreamRecords",
             "Effect": "Allow",
             "Action": "dynamodb:GetRecords",
-            "Resource": "arn:aws:dynamodb:*:*:table/SampleTable/stream/* "
+            "Resource": "*"
         }
+        ]
+})
+}
 
-
+# Create an IAM role for the first Lambda function
 resource "aws_iam_role" "lambda_role_write_to_sqs" {
   name = "lambda-role-write-to-sqs"
 
@@ -138,7 +136,6 @@ resource "aws_lambda_permission" "apigw_lambda" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.lambda_write_to_sqs.function_name
   principal     = "apigateway.amazonaws.com"
-
   source_arn = "arn:aws:execute-api:${var.myregion}:${var.accountId}:${aws_api_gateway_rest_api.parquimetro_api.id}/*/${aws_api_gateway_method.method.http_method}${aws_api_gateway_resource.pagamento_resource.path}"
 }
 
@@ -187,7 +184,7 @@ resource "aws_lambda_function" "lambda_read_from_sqs" {
   handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.SQSListener::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = "" # trocar pelo caminho do pacote da lambda de ler da fila 
+  filename      = "" #trocar pelo caminho do jar da lambda correspondente
   memory_size   = 256
   timeout       = 30
 }
