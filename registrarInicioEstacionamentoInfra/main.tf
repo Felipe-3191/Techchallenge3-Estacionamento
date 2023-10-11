@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1" # Replace with your desired AWS region
+  region = "us-east-1" 
 }
 
 
@@ -26,9 +26,6 @@ resource "aws_iam_role_policy" "lambdasqs_policy" {
 })
 }
 
-
-
-# Create an IAM role for the first Lambda function
 resource "aws_iam_role" "lambda_role_write_to_sqs" {
   name = "lambda-role-write-to-sqs"
 
@@ -56,7 +53,7 @@ resource "aws_lambda_function" "lambda_write_to_sqs" {
   handler       = "com.fiap.techChallenge3.registroSQS.SQSPublisher::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = "/home/felipe/estudos/fiap/registrarPagamentoLambdas/registrarRequisicaoFilaSQS/target/registroSQS-1.0-SNAPSHOT.jar" # Replace with the path to your Lambda deployment package
+  filename      = "" # Coloque o Caminho do seu pacote lambda aqui
   memory_size = 256
   timeout = 30
   environment {
@@ -71,9 +68,53 @@ resource "aws_sqs_queue" "example_queue" {
   name                       = "example-queue"
   delay_seconds              = 0
   max_message_size           = 256000
-  message_retention_seconds  = 345600 # 4 days
+  message_retention_seconds  = 345600 # 4 dias
   visibility_timeout_seconds = 30
   fifo_queue                 = false
 }
 
+variable "myregion" {
+  type = string 
+  default = "us-east-1"
+}
 
+variable "accountId" {
+  type = string
+  default = "659214650186"
+}
+
+resource "aws_api_gateway_rest_api" "parquimetro_api" {
+  name = "techchallenge3"
+}
+
+resource "aws_api_gateway_resource" "pagamento_resource" {
+  path_part   = "pagamento"
+  parent_id   = aws_api_gateway_rest_api.parquimetro_api.root_resource_id
+  rest_api_id = aws_api_gateway_rest_api.parquimetro_api.id
+}
+
+resource "aws_api_gateway_method" "method" {
+  rest_api_id   = aws_api_gateway_rest_api.parquimetro_api.id
+  resource_id   = aws_api_gateway_resource.pagamento_resource.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration" {
+  rest_api_id             = aws_api_gateway_rest_api.parquimetro_api.id
+  resource_id             = aws_api_gateway_resource.pagamento_resource.id
+  http_method             = aws_api_gateway_method.method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.lambda_write_to_sqs.invoke_arn
+}
+
+# Lambda
+resource "aws_lambda_permission" "apigw_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_write_to_sqs.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "arn:aws:execute-api:${var.myregion}:${var.accountId}:${aws_api_gateway_rest_api.parquimetro_api.id}/*/${aws_api_gateway_method.method.http_method}${aws_api_gateway_resource.pagamento_resource.path}"
+}
