@@ -46,7 +46,6 @@ resource "aws_iam_role_policy" "lambdasqs_policy" {
 })
 }
 
-# Create an IAM role for the first Lambda function
 resource "aws_iam_role" "lambda_role_write_to_sqs" {
   name = "lambda-role-write-to-sqs"
 
@@ -67,7 +66,6 @@ resource "aws_iam_role" "lambda_role_write_to_sqs" {
     ]
   })
 }
-
 
 resource "aws_lambda_function" "lambda_write_to_sqs" {
   function_name = "lambda-write-to-sqs"
@@ -94,16 +92,6 @@ resource "aws_sqs_queue" "park_register_queue" {
   fifo_queue                 = false
 }
 
-variable "myregion" {
-  type    = string
-  default = "us-east-1"
-}
-
-variable "accountId" {
-  type    = string
-  default = "659214650186"
-}
-
 resource "aws_api_gateway_rest_api" "parquimetro_api" {
   name = "techchallenge3"
 }
@@ -117,7 +105,7 @@ resource "aws_api_gateway_resource" "pagamento_resource" {
 resource "aws_api_gateway_method" "method" {
   rest_api_id   = aws_api_gateway_rest_api.parquimetro_api.id
   resource_id   = aws_api_gateway_resource.pagamento_resource.id
-  http_method   = "GET"
+  http_method   = "POST"
   authorization = "NONE"
 }
 
@@ -130,13 +118,12 @@ resource "aws_api_gateway_integration" "integration" {
   uri                     = aws_lambda_function.lambda_write_to_sqs.invoke_arn
 }
 
-# Lambda
 resource "aws_lambda_permission" "apigw_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.lambda_write_to_sqs.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn = "arn:aws:execute-api:${var.myregion}:${var.accountId}:${aws_api_gateway_rest_api.parquimetro_api.id}/*/${aws_api_gateway_method.method.http_method}${aws_api_gateway_resource.pagamento_resource.path}"
+  source_arn = "${aws_api_gateway_rest_api.parquimetro_api.execution_arn}/*/*"
 }
 
 resource "aws_dynamodb_table" "registro-estacionamento-table" {
@@ -184,7 +171,7 @@ resource "aws_lambda_function" "lambda_read_from_sqs" {
   handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.SQSListener::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = "" #trocar pelo caminho do jar da lambda correspondente
+  filename      = ¨¨ # trocar pelo caminho do jar da lambda 
   memory_size   = 256
   timeout       = 30
 }
