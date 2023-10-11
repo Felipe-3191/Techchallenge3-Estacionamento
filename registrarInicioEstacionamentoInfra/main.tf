@@ -102,11 +102,40 @@ resource "aws_api_gateway_resource" "pagamento_resource" {
   rest_api_id = aws_api_gateway_rest_api.parquimetro_api.id
 }
 
+resource "aws_api_gateway_model" "parking_registration_model" {
+  rest_api_id  = aws_api_gateway_rest_api.parquimetro_api.id
+  name         = "registroDeEntrada"
+  description  = "a JSON schema"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "type":"object",
+    "properties":{
+        "id":{"type":"string"},
+        "dthEntrada":{"type":"string"},
+        "horariofixovar":{"type":"string"}       
+    },
+    "required":["id","dthEntrada","horariofixovar"],
+    "title":"registroDeEntrada"
+})
+}
+
 resource "aws_api_gateway_method" "method" {
   rest_api_id   = aws_api_gateway_rest_api.parquimetro_api.id
   resource_id   = aws_api_gateway_resource.pagamento_resource.id
   http_method   = "POST"
   authorization = "NONE"
+  request_models = {
+    "application/json" = aws_api_gateway_model.parking_registration_model.name
+  }
+ request_validator_id = aws_api_gateway_request_validator.validate_post.id
+}
+
+resource "aws_api_gateway_request_validator" "validate_post" {
+  name                        = "validate_post"
+  rest_api_id                 = aws_api_gateway_rest_api.parquimetro_api.id
+  validate_request_body       = true
+  validate_request_parameters = false
 }
 
 resource "aws_api_gateway_integration" "integration" {
@@ -171,7 +200,7 @@ resource "aws_lambda_function" "lambda_read_from_sqs" {
   handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.SQSListener::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = ¨¨ # trocar pelo caminho do jar da lambda 
+  filename      = "" # trocar pelo caminho do jar da lambda
   memory_size   = 256
   timeout       = 30
 }
