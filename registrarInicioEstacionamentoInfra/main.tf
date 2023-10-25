@@ -72,7 +72,7 @@ resource "aws_lambda_function" "lambda_write_to_sqs" {
   handler       = "com.fiap.techChallenge3.registroSQS.SQSPublisher::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = "" # trocar pelo caminho do jar da lambda
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/registrarRequisicaoFilaSQS/target/registroSQS-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
   memory_size   = 256
   timeout       = 30
   environment {
@@ -111,11 +111,12 @@ resource "aws_api_gateway_model" "parking_registration_model" {
   schema = jsonencode({
     "type":"object",
     "properties":{
-        "id":{"type":"string"},
-        "dthEntrada":{"type":"string"},
-        "horariofixovar":{"type":"string"}       
+        "condutor":{"type":"string"},
+        "placaDoCarro":{"type":"string"},
+        "horariofixovar":{"type":"string"},
+        "formaPagamento":{"type":"string"}
     },
-    "required":["id","dthEntrada","horariofixovar"],
+    "required":["condutor","placaDoCarro","horariofixovar","formaPagamento"],
     "title":"registroDeEntrada"
 })
 }
@@ -200,7 +201,7 @@ resource "aws_lambda_function" "lambda_read_from_sqs" {
   handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.SQSListener::handleRequest"
   runtime       = "java17"
   role          = aws_iam_role.lambda_role_write_to_sqs.arn
-  filename      = "" # trocar pelo caminho do jar da lambda
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/listenerSQSWriteDynamoLambda/target/ListenerSQSWriteDynamo-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
   memory_size   = 256
   timeout       = 30
 }
