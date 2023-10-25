@@ -7,20 +7,24 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.google.gson.Gson;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class SQSPublisher implements RequestHandler<Object, Object> {
+public class SQSPublisher implements RequestHandler<Map<String,Object>, String> {
 
     @Override
-    public Object handleRequest(Object o, Context context) {
+    public String handleRequest(Map<String,Object> input, Context context) {
+
+
 
         final String queueUrl = System.getenv("SQS_QUEUE_URL");
-        String messageBody = "Hello, SQS!";
+        String messageBody = input.get("body").toString();
         LambdaLogger logger = context.getLogger();
         logger.log("1 stop");
 
+        logger.log("msgBody: " + messageBody);
 
         AmazonSQS sqs = AmazonSQSClientBuilder.standard()
                 .withRegion("us-east-1")
@@ -56,7 +60,7 @@ public class SQSPublisher implements RequestHandler<Object, Object> {
         responseBody.put("message", "Hello, World!"); // Your response data
         response.put("body", responseBody);
 
-        return response;
+        return "ok";
 
 
 

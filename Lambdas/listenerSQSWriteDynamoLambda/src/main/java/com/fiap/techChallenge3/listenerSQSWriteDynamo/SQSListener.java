@@ -17,10 +17,13 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.fiap.techChallenge3.listenerSQSWriteDynamo.model.RegistroEstacionamentoModel;
+import com.google.gson.Gson;
 import org.joda.time.Instant;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class SQSListener implements RequestHandler<SQSEvent, Void> {
 
@@ -29,20 +32,27 @@ public class SQSListener implements RequestHandler<SQSEvent, Void> {
     DynamoDB dynamoDB = new DynamoDB(client);
     @Override
     public Void handleRequest(SQSEvent sqsEvent, Context context) {
+
+        LambdaLogger logger = context.getLogger();
+
         Table table = dynamoDB.getTable(Dynamo_DB_TABLE_NAME);
 
         for (SQSEvent.SQSMessage msg : sqsEvent.getRecords()) {
             String messageBody = msg.getBody();
-            System.out.println("Mensagem Recebida: " + messageBody);
+
+            Gson gson = new Gson();
+            RegistroEstacionamentoModel registroEstacionamentoModel = gson.fromJson(messageBody, RegistroEstacionamentoModel.class);
 
 
-
-
-           Item item = new Item()
-                            .withPrimaryKey("TicketId", "34faslpwqeoirufasklj")
+            Item item = new Item()
+                            .withPrimaryKey("TicketId", UUID.randomUUID().toString())
                             .withString("PagamentoRealizado", "N")
-                            .withString("DataEntrada", Instant.now().toString()
-                                    );
+                            .withString("DataEntrada", Instant.now().toString())
+                            .withString("horariofixovar", registroEstacionamentoModel.getHorariofixovar())
+                            .withString("condutor", registroEstacionamentoModel.getCondutor())
+                            .withString("placaDoCarro", registroEstacionamentoModel.getPlacaDoCarro())
+                            .withString("formaPagamento", registroEstacionamentoModel.getFormaPagamento());
+
 
 
             PutItemOutcome outcome = table.putItem(item);
