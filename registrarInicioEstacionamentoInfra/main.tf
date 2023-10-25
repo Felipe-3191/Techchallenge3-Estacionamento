@@ -3,6 +3,45 @@ provider "aws" {
 }
 
 
+resource "aws_iam_role_policy" "lambdaevent_policy" {
+  name = "lambdaevent_policy"
+  role = aws_iam_role.lambda_role_write_to_eventbridge.id
+  policy = jsonencode({
+    "Version" : "2012-10-17"
+    "Statement" : [
+     { 
+       "Effect" : "Allow",
+       "Action" : [ 
+                 "dynamodb:BatchGetItem",
+                "dynamodb:GetItem",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:DescribeStream",
+                "dynamodb:GetRecords",
+                "dynamodb:GetShardIterator",
+                "dynamodb:ListStreams",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+        }
+
+         
+
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "lambdasqs_policy" {
   name = "lambdasqs_policy"
   role = aws_iam_role.lambda_role_write_to_sqs.id
@@ -66,6 +105,28 @@ resource "aws_iam_role" "lambda_role_write_to_sqs" {
     ]
   })
 }
+
+resource "aws_iam_role" "lambda_role_write_to_eventbridge" {
+  name = "lambda-role-write-to-eventbridge"
+
+  assume_role_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "sts:AssumeRole"
+        ],
+        "Principal" : {
+          "Service" : [
+            "lambda.amazonaws.com"
+          ]
+        }
+      }
+    ]
+  })
+}
+
 
 resource "aws_lambda_function" "lambda_write_to_sqs" {
   function_name = "lambda-write-to-sqs"
@@ -163,6 +224,8 @@ resource "aws_dynamodb_table" "registro-estacionamento-table" {
   write_capacity = 10
   hash_key       = "TicketId"
   range_key      = "PagamentoRealizado"
+  stream_enabled = true
+  stream_view_type = "NEW_IMAGE"
 
   attribute {
     name = "TicketId"
@@ -206,7 +269,7 @@ resource "aws_lambda_function" "lambda_read_from_sqs" {
   timeout       = 30
 }
 
-resource "aws_lambda_event_source_mapping" "event_source_mapping" {
+resource "aws_lambda_event_source_mapping" "sqs_read_event_source_mapping" {
   event_source_arn = aws_sqs_queue.park_register_queue.arn
   enabled          = true
   function_name    = aws_lambda_function.lambda_read_from_sqs.arn
@@ -214,7 +277,25 @@ resource "aws_lambda_event_source_mapping" "event_source_mapping" {
 }
 
 
+resource "aws_lambda_function" "lambda_write_to_eventbridge" {
+  function_name = "lambda-write-to-eventbridge"
+  handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.PublishEventBridge::handleRequest"
+  runtime       = "java17"
+  role          = aws_iam_role.lambda_role_write_to_eventbridge.arn  #aws_iam_role.lambda_role_write_to_sqs.arn
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/publishEventBridge/target/publishEventBridge-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
+  memory_size   = 256
+  timeout       = 30
+}
 
+
+
+resource "aws_lambda_event_source_mapping" "dynamo_react_mapping" {
+  event_source_arn = aws_dynamodb_table.registro-estacionamento-table.stream_arn
+  function_name    = aws_lambda_function.lambda_write_to_eventbridge.function_name
+  batch_size       = 10  # Adjust batch size as needed
+  starting_position = "LATEST"
+  enabled = true
+}
 
 
 
