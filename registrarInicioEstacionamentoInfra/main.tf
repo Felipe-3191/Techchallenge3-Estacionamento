@@ -158,7 +158,7 @@ resource "aws_api_gateway_rest_api" "parquimetro_api" {
 }
 
 resource "aws_api_gateway_resource" "pagamento_resource" {
-  path_part   = "pagamento"
+  path_part   = "registroEstacionamento"
   parent_id   = aws_api_gateway_rest_api.parquimetro_api.root_resource_id
   rest_api_id = aws_api_gateway_rest_api.parquimetro_api.id
 }
