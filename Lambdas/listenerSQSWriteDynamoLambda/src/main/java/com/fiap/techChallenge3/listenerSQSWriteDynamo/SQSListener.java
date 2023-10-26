@@ -45,7 +45,7 @@ public class SQSListener implements RequestHandler<SQSEvent, Void> {
 
 
             Item item = new Item()
-                            .withPrimaryKey("TicketId", UUID.randomUUID().toString())
+                            .withPrimaryKey("TicketId", registroEstacionamentoModel.getId())
                             .withString("PagamentoRealizado", "N")
                             .withString("DataEntrada", Instant.now().toString())
                             .withString("horariofixovar", registroEstacionamentoModel.getHorariofixovar())
