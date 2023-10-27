@@ -32,9 +32,7 @@ public class SQSPublisher implements RequestStreamHandler{
 
         LambdaLogger logger = context.getLogger();
         logger.log("1 stop");
-
-
-
+        
         try {
             JSONObject event = (JSONObject) parser.parse(reader);
             String messageBody = event.get("body").toString();
