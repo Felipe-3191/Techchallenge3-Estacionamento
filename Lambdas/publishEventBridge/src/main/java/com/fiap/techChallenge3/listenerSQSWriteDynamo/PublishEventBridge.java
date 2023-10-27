@@ -13,9 +13,7 @@ import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeVal
 import org.json.simple.JSONObject;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
-import software.amazon.awssdk.services.eventbridge.model.EventBridgeException;
-import software.amazon.awssdk.services.eventbridge.model.PutRuleRequest;
-import software.amazon.awssdk.services.eventbridge.model.PutRuleResponse;
+import software.amazon.awssdk.services.eventbridge.model.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -31,6 +29,7 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
     DynamoDB dynamoDB = new DynamoDB(client);
 
     private final String lambdaARN = System.getenv("LAMBDA_EVCALL_URL");;
+    private final String lambdaRoleARN = System.getenv("LAMBDA_ROLE_ARN");
     private final String targetId = UUID.randomUUID().toString();
 
 
@@ -46,34 +45,46 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
 
         LambdaLogger logger = context.getLogger();
 
+        logger.log("lambdaARN: " + lambdaARN);
+        logger.log("lambdaRoleARN: " + lambdaRoleARN);
+
         Table table = dynamoDB.getTable(Dynamo_DB_TABLE_NAME);
 
         for (DynamodbEvent.DynamodbStreamRecord record : dynamodbEvent.getRecords()) {
 
             Map<String, AttributeValue> dadosInseridos = record.getDynamodb().getNewImage();
 
-            String ruleName = dadosInseridos.get("condutor").toString() + "-" + dadosInseridos.get("placaDoCarro").toString()
-                    + "-" + dadosInseridos.get("TicketId").toString().substring(0,6);
+            String ruleName = dadosInseridos.get("condutor").getS() + "-" + dadosInseridos.get("placaDoCarro").getS()
+                    + "-" + dadosInseridos.get("TicketId").getS().substring(0,6);
 
-            Instant horaInicioEstacionamento = Instant.parse(dadosInseridos.get("DataEntrada").toString());
+            Instant horaInicioEstacionamento = Instant.parse(dadosInseridos.get("DataEntrada").getS());
             Instant horarioAlerta = horaInicioEstacionamento.plus(5, ChronoUnit.MINUTES);
             LocalDateTime horarioLocal = LocalDateTime.ofInstant(horarioAlerta, ZoneId.of("America/Sao_Paulo"));
-            String cronExpression = String.format("at(%s)", horarioLocal.toString());
+
+            String cronExpression = String.format("cron(%s %s %s %s %s %s)",
+                    horarioLocal.getMinute(),
+                    horarioLocal.getHour(),
+                    horarioLocal.getDayOfMonth(),
+                    horarioLocal.getMonth().getValue(),
+                    "?",
+                    horarioLocal.getYear()
+            );
+
+
+
+
             JSONObject json = new JSONObject();
 
 
             createEBRule(eventBridgeClient, ruleName, cronExpression);
 
-
-
-
-            logger.log(dadosInseridos.get("TicketId").toString());
-            logger.log(dadosInseridos.get("PagamentoRealizado").toString());
-            logger.log(dadosInseridos.get("DataEntrada").toString());
-            logger.log(dadosInseridos.get("horariofixovar").toString());
-            logger.log(dadosInseridos.get("condutor").toString());
-            logger.log(dadosInseridos.get("placaDoCarro").toString());
-            logger.log(dadosInseridos.get("formaPagamento").toString());
+            logger.log(dadosInseridos.get("TicketId").getS());
+            logger.log(dadosInseridos.get("PagamentoRealizado").getS());
+            logger.log(dadosInseridos.get("DataEntrada").getS());
+            logger.log(dadosInseridos.get("horariofixovar").getS());
+            logger.log(dadosInseridos.get("condutor").getS());
+            logger.log(dadosInseridos.get("placaDoCarro").getS());
+            logger.log(dadosInseridos.get("formaPagamento").getS());
 
         }
 
@@ -87,6 +98,7 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
             PutRuleRequest ruleRequest = PutRuleRequest.builder()
                     .name(ruleName)
                     .eventBusName("default")
+
                     .scheduleExpression(cronExpression)
                     .state("ENABLED")
                     .description("Lambda que avisará o fim do período de estacionamento")
@@ -101,8 +113,31 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
     }
 
 
-    private static void putRuleTarget(EventBridgeClient eventBrClient, String ruleName, String lambdaARN, String json, String targetId ) {
+    private static void putRuleTarget(EventBridgeClient eventBrClient, String ruleName, String lambdaARN, String lambdaRoleArn, String json, String targetId ) {
+            try {
 
+                Target lambdaTarget = Target.builder()
+                        .arn(lambdaARN)
+                        .roleArn(lambdaRoleArn)
+                        .id(targetId)
+                        .input(json)
+                        .build();
+
+
+                PutTargetsRequest targetsRequest = PutTargetsRequest.builder()
+                        .eventBusName("default")
+                        .rule(ruleName)
+                        .targets(lambdaTarget)
+                        .build();
+
+                eventBrClient.putTargets(targetsRequest);
+                System.out.println("The "+lambdaARN + " was successfully used as a target");
+
+
+            } catch (EventBridgeException e) {
+                System.err.println(e.awsErrorDetails().errorMessage());
+                System.exit(1);
+            }
 
     }
 
