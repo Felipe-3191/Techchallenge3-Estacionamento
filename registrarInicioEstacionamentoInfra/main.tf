@@ -34,10 +34,18 @@ resource "aws_iam_role_policy" "lambdaevent_policy" {
                 "logs:PutLogEvents"
             ],
             "Resource": "*"
-        }
-
-         
-
+        },
+        {
+            "Sid": "EventBridgeActions",
+            "Effect": "Allow",
+            "Action": [
+                "events:*",
+                "schemas:*",
+                "scheduler:*",
+                "pipes:*"
+            ],
+            "Resource": "*"
+        }         
     ]
   })
 }
@@ -281,13 +289,18 @@ resource "aws_lambda_function" "lambda_write_to_eventbridge" {
   function_name = "lambda-write-to-eventbridge"
   handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.PublishEventBridge::handleRequest"
   runtime       = "java17"
-  role          = aws_iam_role.lambda_role_write_to_eventbridge.arn  #aws_iam_role.lambda_role_write_to_sqs.arn
+  role          = aws_iam_role.lambda_role_write_to_eventbridge.arn
   filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/publishEventBridge/target/publishEventBridge-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
   memory_size   = 256
   timeout       = 30
+  environment {
+    variables = {
+      LAMBDA_EVCALL_URL = aws_lambda_function.lambda_read_from_eventbridge.arn,
+      LAMBDA_ROLE_ARN = aws_iam_role.lambda_role_write_to_eventbridge.arn
+    }
+  }
+
 }
-
-
 
 resource "aws_lambda_event_source_mapping" "dynamo_react_mapping" {
   event_source_arn = aws_dynamodb_table.registro-estacionamento-table.stream_arn
@@ -297,6 +310,15 @@ resource "aws_lambda_event_source_mapping" "dynamo_react_mapping" {
   enabled = true
 }
 
+resource "aws_lambda_function" "lambda_read_from_eventbridge" {
+  function_name = "lambda-read-from-eventbridge"
+  handler       = "com.fiap.techChallenge3.listenerEventBridgeSendMessage.ListenerEventBridge::handleRequest"
+  runtime       = "java17"
+  role          = aws_iam_role.lambda_role_write_to_eventbridge.arn 
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/listenerEventBridgeSendMessage/target/listenerEventBridge-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
+  memory_size   = 256
+  timeout       = 30
+}
 
 
 
