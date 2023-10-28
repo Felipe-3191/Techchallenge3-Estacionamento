@@ -45,7 +45,13 @@ resource "aws_iam_role_policy" "lambdaevent_policy" {
                 "pipes:*"
             ],
             "Resource": "*"
-        }         
+        },
+        {
+            "Sid": "IAMPassRoleAccessForEventBridge",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "*",
+        }
     ]
   })
 }
@@ -225,6 +231,15 @@ resource "aws_lambda_permission" "apigw_lambda" {
   source_arn = "${aws_api_gateway_rest_api.parquimetro_api.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "event_lambda" {
+   statement_id = "AllowExecutionFromEventBridge"
+   action = "lambda:InvokeFunction"
+   function_name = aws_lambda_function.lambda_read_from_eventbridge.function_name
+   principal     = "events.amazonaws.com"
+   source_arn = "arn:aws:events:us-east-1:659214650186:rule/*"
+  
+
+}
 resource "aws_dynamodb_table" "registro-estacionamento-table" {
   name           = "Estacionamento"
   billing_mode   = "PROVISIONED"
