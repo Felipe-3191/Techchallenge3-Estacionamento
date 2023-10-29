@@ -34,7 +34,7 @@ public class TestClass {
 
           Instant horaInicioEstacionamento = Instant.now();
           Instant horarioAlerta = horaInicioEstacionamento.plus(5, ChronoUnit.MINUTES);
-          LocalDateTime horarioLocal = LocalDateTime.ofInstant(horarioAlerta, ZoneId.of("America/Sao_Paulo"));
+          LocalDateTime horarioLocal = LocalDateTime.ofInstant(horarioAlerta, ZoneId.of("UTC"));
 
 //          String cronExpression = String.format("at(%s)", horarioLocal.format(awsDateTime));
           String cronExpression = String.format("cron(%s %s %s %s %s %s)",
@@ -52,7 +52,7 @@ public class TestClass {
           System.out.println(cronExpression);
 
 
-          createEBRule(eventBridgeClient, "testerulename", cronExpression);
+        //  createEBRule(eventBridgeClient, "testerulename", cronExpression);
 
 
      }

@@ -3,31 +3,61 @@ package com.fiap.techChallenge3.listenerEventBridgeSendMessage;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
-public class ListenerEventBridge implements RequestHandler<ScheduledEvent, Void>{
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
+import software.amazon.awssdk.services.eventbridge.model.*;
+
+import java.util.List;
+import java.util.Map;
+
+public class ListenerEventBridge implements RequestHandler<Map<String, String>, Void>{
 
 
     @Override
-    public Void handleRequest(ScheduledEvent event, Context context) {
-
-        JSONParser parser = new JSONParser();
-        JSONObject responseJson = new JSONObject();
-
+    public Void handleRequest(Map<String, String> eventInput, Context context) {
         LambdaLogger logger = context.getLogger();
 
+        Region region = Region.US_EAST_1;
+        EventBridgeClient eventBridgeClient = EventBridgeClient.builder()
+                .region(region)
+                .build();
+
+        String ruleName = eventInput.get("ruleName");
+
+
+// deletar os targets
+        ListTargetsByRuleRequest request = ListTargetsByRuleRequest.builder()
+                .rule(ruleName)
+                .build();
+
+        ListTargetsByRuleResponse response = eventBridgeClient.listTargetsByRule(request);
+        List<Target> allTargets = response.targets();
+
+        for (Target myTarget:allTargets) {
+            RemoveTargetsRequest removeTargetsRequest = RemoveTargetsRequest.builder()
+                    .rule(ruleName)
+                    .ids(myTarget.id())
+                    .build();
+
+            eventBridgeClient.removeTargets(removeTargetsRequest);
+
+        }
+//deletar a rule
+        DeleteRuleRequest ruleRequest = DeleteRuleRequest.builder()
+                        .name(ruleName)
+                        .build();
+
+        eventBridgeClient.deleteRule(ruleRequest);
         logger.log("Lambda chamada através do EventBridge");
-        logger.log(event.getId());
-        logger.log(event.getDetailType());
-        event.getDetail().forEach(
+
+
+        eventInput.forEach(
                 (detailName, detailValue) -> {
                     logger.log(detailName + "-" + detailValue.toString());
                 }
 
         );
-
 
         return null;
     }
