@@ -185,11 +185,14 @@ resource "aws_api_gateway_model" "parking_registration_model" {
 
   schema = jsonencode({
     "type":"object",
+    "required": ["condutor","placaDoCarro","horariofixovar","formaPagamento"],
     "properties":{
         "condutor":{"type":"string"},
         "placaDoCarro":{"type":"string"},
         "horariofixovar":{"type":"string"},
-        "formaPagamento":{"type":"string"}
+        "formaPagamento":{"type":"string"},
+        "emailContato":{"type":"string"},
+        "tempoEstacionamentoFixo":{"type":"integer"} 
     },
     "required":["condutor","placaDoCarro","horariofixovar","formaPagamento"],
     "title":"registroDeEntrada"

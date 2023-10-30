@@ -32,7 +32,7 @@ public class SQSPublisher implements RequestStreamHandler{
 
         LambdaLogger logger = context.getLogger();
         logger.log("1 stop");
-        
+
         try {
             JSONObject event = (JSONObject) parser.parse(reader);
             String messageBody = event.get("body").toString();
@@ -49,6 +49,16 @@ public class SQSPublisher implements RequestStreamHandler{
             Gson gson = new Gson();
             RegistroEstacionamentoModel registroEstacionamentoModel = gson.fromJson(messageBody, RegistroEstacionamentoModel.class);
             registroEstacionamentoModel.setId(UUID.randomUUID().toString());
+
+
+            if (registroEstacionamentoModel.getHorariofixovar().equalsIgnoreCase("FIXO")
+                    && (registroEstacionamentoModel.getTempoEstacionamentoFixo() == null || registroEstacionamentoModel.getTempoEstacionamentoFixo().intValue() <= 0)) {
+                throw new Exception("Para estacionamentos com tempo fixo é necessário informar o tempo de permanência");
+            }
+
+            if (registroEstacionamentoModel.getFormaPagamento().equalsIgnoreCase("PIX") && !registroEstacionamentoModel.getHorariofixovar().equalsIgnoreCase("FIXO")) {
+                throw new Exception("Pagamentos em PIX só estão disponíveis para períodos fixos");
+            }
 
 
             SendMessageRequest sendMessageRequest = new SendMessageRequest()
@@ -71,14 +81,18 @@ public class SQSPublisher implements RequestStreamHandler{
             responseJson.put("statusCode", 200);
             responseJson.put("body", responseBody.toString());
 
-        } catch (ParseException  pex) {
+        } catch (ParseException pex) {
             responseJson.put("statusCode", 400);
-            responseJson.put("exception", pex);
+            responseJson.put("body", pex.getMessage());
 
+        } catch (Exception e) {
+            responseJson.put("statusCode", 400);
+            responseJson.put("body", e.getMessage());
+
+        } finally {
+            OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
+            writer.write(responseJson.toString());
+            writer.close();
         }
-
-        OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
-        writer.write(responseJson.toString());
-        writer.close();
     }
 }

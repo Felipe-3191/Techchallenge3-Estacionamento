@@ -2,6 +2,7 @@ package com.fiap.techChallenge3.listenerSQSWriteDynamo.model;
 
 public class RegistroEstacionamentoModel {
 
+
     private String id;
 
     private String horariofixovar;
@@ -14,7 +15,28 @@ public class RegistroEstacionamentoModel {
 
     private String formaPagamento;
 
+    private String emailContato;
+
+    private Integer tempoEstacionamentoFixo;
+
+
     private String pagamentoRealizado;
+
+    public String getEmailContato() {
+        return emailContato;
+    }
+
+    public void setEmailContato(String emailContato) {
+        this.emailContato = emailContato;
+    }
+
+    public Integer getTempoEstacionamentoFixo() {
+        return tempoEstacionamentoFixo;
+    }
+
+    public void setTempoEstacionamentoFixo(Integer tempoEstacionamentoFixo) {
+        this.tempoEstacionamentoFixo = tempoEstacionamentoFixo;
+    }
 
     public String getPagamentoRealizado() {
         return pagamentoRealizado;
@@ -71,4 +93,9 @@ public class RegistroEstacionamentoModel {
     public void setFormaPagamento(String formaPagamento) {
         this.formaPagamento = formaPagamento;
     }
+
+    public Double calcularValorEstacionamento() {
+        return this.getTempoEstacionamentoFixo() * 7.00;
+    }
 }
+

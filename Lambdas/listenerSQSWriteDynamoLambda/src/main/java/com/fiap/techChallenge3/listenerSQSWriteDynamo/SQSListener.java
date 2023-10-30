@@ -51,7 +51,14 @@ public class SQSListener implements RequestHandler<SQSEvent, Void> {
                             .withString("horariofixovar", registroEstacionamentoModel.getHorariofixovar())
                             .withString("condutor", registroEstacionamentoModel.getCondutor())
                             .withString("placaDoCarro", registroEstacionamentoModel.getPlacaDoCarro())
-                            .withString("formaPagamento", registroEstacionamentoModel.getFormaPagamento());
+                            .withString("formaPagamento", registroEstacionamentoModel.getFormaPagamento())
+                            .withString("emailContato", registroEstacionamentoModel.getEmailContato());
+
+            if (registroEstacionamentoModel.getHorariofixovar().equalsIgnoreCase("FIXO")) {
+                item.withInt("tempoEstacionamentoFixo", registroEstacionamentoModel.getTempoEstacionamentoFixo());
+                Double valorEstacionamento = registroEstacionamentoModel.calcularValorEstacionamento();
+                item.withDouble("valorEstacionamento", valorEstacionamento);
+            }
 
 
 

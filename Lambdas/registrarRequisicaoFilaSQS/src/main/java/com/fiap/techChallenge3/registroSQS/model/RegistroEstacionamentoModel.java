@@ -14,7 +14,27 @@ public class RegistroEstacionamentoModel {
 
     private String formaPagamento;
 
+    private String emailContato;
+
+    private Integer tempoEstacionamentoFixo;
+
     private String pagamentoRealizado;
+
+    public String getEmailContato() {
+        return emailContato;
+    }
+
+    public void setEmailContato(String emailContato) {
+        this.emailContato = emailContato;
+    }
+
+    public Integer getTempoEstacionamentoFixo() {
+        return tempoEstacionamentoFixo;
+    }
+
+    public void setTempoEstacionamentoFixo(Integer tempoEstacionamentoFixo) {
+        this.tempoEstacionamentoFixo = tempoEstacionamentoFixo;
+    }
 
     public String getPagamentoRealizado() {
         return pagamentoRealizado;
