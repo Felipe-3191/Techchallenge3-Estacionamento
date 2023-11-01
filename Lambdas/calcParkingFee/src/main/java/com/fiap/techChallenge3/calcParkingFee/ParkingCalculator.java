@@ -52,8 +52,6 @@ public class ParkingCalculator implements RequestStreamHandler{
             RegistroEstacionamentoModelMin registroEstacionamentoModel = gson.fromJson(messageBody, RegistroEstacionamentoModelMin.class);
 
 
-            //aqui preciso inserir a busca no banco
-
             DynamoDB dynamoDB = new DynamoDB(client);
 
             Table table = dynamoDB.getTable("Estacionamento");
@@ -61,7 +59,7 @@ public class ParkingCalculator implements RequestStreamHandler{
             QuerySpec spec = new QuerySpec()
                     .withKeyConditionExpression("TicketId = :v_id")
                     .withValueMap(new ValueMap()
-                            .withString(":v_id", "a493495d-1874-4b14-ac17-47dc5062da16"));
+                            .withString(":v_id", registroEstacionamentoModel.getId()));
 
             ItemCollection<QueryOutcome> items = table.query(spec);
 
@@ -107,7 +105,7 @@ public class ParkingCalculator implements RequestStreamHandler{
         Instant dataEntrada = Instant.parse(dataInicialIso);
         Instant dataAtual = Instant.now();
         Duration duration = Duration.between(dataAtual, dataEntrada);
-        long qtdeHoras = duration.get(ChronoUnit.HOURS);
+        long qtdeHoras = duration.toHours();
         double valorEstacionamento = qtdeHoras > 0 ? valor * qtdeHoras : valor;
 
 
