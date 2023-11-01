@@ -172,7 +172,7 @@ resource "aws_api_gateway_rest_api" "parquimetro_api" {
 }
 
 resource "aws_api_gateway_resource" "pagamento_resource" {
-  path_part   = "registroEstacionamento"
+  path_part   = "estacionamento"
   parent_id   = aws_api_gateway_rest_api.parquimetro_api.root_resource_id
   rest_api_id = aws_api_gateway_rest_api.parquimetro_api.id
 }
@@ -338,6 +338,75 @@ resource "aws_lambda_function" "lambda_read_from_eventbridge" {
   timeout       = 30
 }
 
+#========================================================================================================================================================================
+
+resource "aws_api_gateway_resource" "calc_pagamento_resource" {
+  path_part   = "calcular"
+  parent_id   = aws_api_gateway_resource.pagamento_resource.id
+  rest_api_id = aws_api_gateway_rest_api.parquimetro_api.id
+}
 
 
+resource "aws_api_gateway_model" "parking_fee_model" {
+  rest_api_id  = aws_api_gateway_rest_api.parquimetro_api.id
+  name         = "calculoValor"
+  description  = "a JSON schema"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "type":"object",
+    "required": ["id"],
+    "properties":{
+        "id":{"type":"string"}
+    },
+    "title":"calculoValor"
+})
+}
+
+resource "aws_api_gateway_request_validator" "validate_fee_post" {
+  name                        = "validate_fee_post"
+  rest_api_id                 = aws_api_gateway_rest_api.parquimetro_api.id
+  validate_request_body       = true
+  validate_request_parameters = false
+}
+
+
+resource "aws_api_gateway_method" "parking_fee_post_method" {
+  rest_api_id   = aws_api_gateway_rest_api.parquimetro_api.id
+  resource_id   = aws_api_gateway_resource.calc_pagamento_resource.id
+  http_method   = "POST"
+  authorization = "NONE"
+  request_models = {
+    "application/json" = aws_api_gateway_model.parking_fee_model.name
+  }
+ request_validator_id = aws_api_gateway_request_validator.validate_fee_post.id
+}
+
+
+resource "aws_api_gateway_integration" "integration_fee" {
+  rest_api_id             = aws_api_gateway_rest_api.parquimetro_api.id
+  resource_id             = aws_api_gateway_resource.calc_pagamento_resource.id
+  http_method             = aws_api_gateway_method.parking_fee_post_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.lambda_calc_parking_fee.invoke_arn
+}
+
+resource "aws_lambda_permission" "apigw_lambda_fee" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_calc_parking_fee.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn = "${aws_api_gateway_rest_api.parquimetro_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_function" "lambda_calc_parking_fee" {
+  function_name = "lambda-calc-parking-fee"
+  handler       = "com.fiap.techChallenge3.calcParkingFee.ParkingCalculator::handleRequest"
+  runtime       = "java17"
+  role          = aws_iam_role.lambda_role_write_to_eventbridge.arn
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/calcParkingFee/target/calcParkingFee-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
+  memory_size   = 256
+  timeout       = 30
+}
 
