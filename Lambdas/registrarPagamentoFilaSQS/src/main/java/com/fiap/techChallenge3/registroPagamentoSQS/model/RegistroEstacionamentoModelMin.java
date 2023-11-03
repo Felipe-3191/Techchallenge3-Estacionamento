@@ -1,4 +1,4 @@
-package com.fiap.techChallenge3.registroSQS.model;
+package com.fiap.techChallenge3.registroPagamentoSQS.model;
 
 public class RegistroEstacionamentoModelMin {
 
