@@ -28,13 +28,19 @@ public class TestClass {
           QuerySpec spec = new QuerySpec()
                   .withKeyConditionExpression("TicketId = :v_id")
                   .withValueMap(new ValueMap()
-                          .withString(":v_id", "e2fb74b7-efaa-4181-964a-41a54e82e6d1"));
+                          .withString(":v_id", "813122ac-3cb2-4781-9589-a3139a3b051c"));
 
           ItemCollection<QueryOutcome> items = table.query(spec);
 
 
+
+
           Iterator<Item> iterator = items.iterator();
           Item item = null;
+          if (!iterator.hasNext()) {
+               System.out.println("Nenhum registro encontrado");
+          }
+
           while (iterator.hasNext()) {
                item = iterator.next();
                if (!item.getString("horariofixovar").equalsIgnoreCase("fixo")) {

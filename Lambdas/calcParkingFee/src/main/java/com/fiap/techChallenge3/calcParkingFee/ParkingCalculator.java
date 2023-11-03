@@ -63,12 +63,12 @@ public class ParkingCalculator implements RequestStreamHandler{
 
             ItemCollection<QueryOutcome> items = table.query(spec);
 
-            if (items.getAccumulatedItemCount() <=0) {
-                throw new Exception("Registro referente ao id: " + registroEstacionamentoModel.getId() + " não encontrado");
-            }
 
             JsonObject responseBody = new JsonObject();
             Iterator<Item> iterator = items.iterator();
+            if (!iterator.hasNext()) {
+                throw new Exception("Registro referente ao id: " + registroEstacionamentoModel.getId() + " não encontrado");
+            }
             Item item = null;
             while (iterator.hasNext()) {
                 item = iterator.next();
@@ -78,11 +78,11 @@ public class ParkingCalculator implements RequestStreamHandler{
                     item.withDouble("valorEstacionamento", valorEstacionamento);
                     PutItemOutcome outcome = table.putItem(item);
                 }
-                System.out.println(item.toJSONPretty());
+                responseJson.put("body", item.toJSONPretty());
             }
 
             responseJson.put("statusCode", 200);
-            responseJson.put("body", responseBody.toString());
+
 
         } catch (ParseException pex) {
             responseJson.put("statusCode", 400);
@@ -112,3 +112,4 @@ public class ParkingCalculator implements RequestStreamHandler{
         return valorEstacionamento;
     }
 }
+
