@@ -437,9 +437,10 @@ resource "aws_api_gateway_model" "parking_realizar_pagamento_model" {
 
   schema = jsonencode({
     "type":"object",
-    "required": ["id"],
+    "required": ["id", "valoraPagar"],
     "properties":{
-        "id":{"type":"string"}        
+        "id":{"type":"string"},
+        "valoraPagar":{"type":"number"}
     },
     "title":"RealizarPagamento"
 })
