@@ -7,7 +7,7 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
-import com.fiap.techChallenge3.registroPagamentoSQS.model.RegistroEstacionamentoModelMin;
+import com.fiap.techChallenge3.registroPagamentoSQS.model.RegistroPagamentoModel;
 import com.google.gson.Gson;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -42,7 +42,7 @@ public class SQSPublisher implements RequestStreamHandler{
 
 
             Gson gson = new Gson();
-            RegistroEstacionamentoModelMin registroEstacionamentoModel = gson.fromJson(messageBody, RegistroEstacionamentoModelMin.class);
+            RegistroPagamentoModel registroEstacionamentoModel = gson.fromJson(messageBody, RegistroPagamentoModel.class);
             registroEstacionamentoModel.setId(UUID.randomUUID().toString());
 
 
