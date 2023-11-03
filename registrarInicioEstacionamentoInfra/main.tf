@@ -325,6 +325,14 @@ resource "aws_lambda_event_source_mapping" "dynamo_react_mapping" {
   function_name    = aws_lambda_function.lambda_write_to_eventbridge.function_name
   batch_size       = 10  # Adjust batch size as needed
   starting_position = "LATEST"
+  filter_criteria {
+    filter {
+      pattern = jsonencode({
+       "eventName": ["INSERT"]
+	}
+      )
+    }
+  }
   enabled = true
 }
 
