@@ -81,6 +81,8 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
             json.put("horariofixovar", dadosInseridos.get("horariofixovar").getS());
             json.put("condutor", dadosInseridos.get("condutor").getS());
             json.put("placaDoCarro", dadosInseridos.get("placaDoCarro").getS());
+            json.put("mensagemAlerta", "Atenção: Seu período de estacionamento irá esgotar, caso tenha estacionado com horário variável," +
+                    " uma renovação automática será efetuada");
 
             createEBRule(eventBridgeClient, ruleName, cronExpression);
             putRuleTarget(eventBridgeClient, ruleName, lambdaARN, lambdaRoleARN, json.toJSONString(), targetId);
