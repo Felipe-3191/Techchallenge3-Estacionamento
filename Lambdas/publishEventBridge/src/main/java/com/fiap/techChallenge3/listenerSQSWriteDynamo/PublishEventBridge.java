@@ -44,7 +44,6 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
 
 
         LambdaLogger logger = context.getLogger();
-
         logger.log("lambdaARN: " + lambdaARN);
         logger.log("lambdaRoleARN: " + lambdaRoleARN);
 
@@ -54,7 +53,9 @@ public class PublishEventBridge implements RequestHandler<DynamodbEvent, Void> {
 
             Map<String, AttributeValue> dadosInseridos = record.getDynamodb().getNewImage();
 
-            String ruleName = dadosInseridos.get("condutor").getS() + "-" + dadosInseridos.get("placaDoCarro").getS()
+            //montar nome da regra (removendo whitespaces que podem vir a existir)
+            String ruleName = dadosInseridos.get("condutor").getS().replaceAll("\\s", "") + "-"
+                    + dadosInseridos.get("placaDoCarro").getS().replaceAll("\\s", "")
                     + "-" + dadosInseridos.get("TicketId").getS().substring(0,6);
 
             Instant horaInicioEstacionamento = Instant.parse(dadosInseridos.get("DataEntrada").getS());
