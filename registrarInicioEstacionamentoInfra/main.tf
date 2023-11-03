@@ -159,7 +159,7 @@ resource "aws_lambda_function" "lambda_write_to_sqs" {
 
 
 resource "aws_sqs_queue" "park_register_queue" {
-  name                       = "example-queue"
+  name                       = "registro-entrada-estacionamento-queue"
   delay_seconds              = 90
   max_message_size           = 4096
   message_retention_seconds  = 86400 # 1 dia
@@ -416,5 +416,94 @@ resource "aws_lambda_function" "lambda_calc_parking_fee" {
   filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/calcParkingFee/target/calcParkingFee-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
   memory_size   = 256
   timeout       = 30
+}
+
+#===========================================================================================================================================================================
+
+
+
+resource "aws_api_gateway_resource" "realizar_pagamento_resource" {
+  path_part   = "pagar"
+  parent_id   = aws_api_gateway_resource.pagamento_resource.id
+  rest_api_id = aws_api_gateway_rest_api.parquimetro_api.id
+}
+
+
+resource "aws_api_gateway_model" "parking_realizar_pagamento_model" {
+  rest_api_id  = aws_api_gateway_rest_api.parquimetro_api.id
+  name         = "RealizarPagamento"
+  description  = "a JSON schema"
+  content_type = "application/json"
+
+  schema = jsonencode({
+    "type":"object",
+    "required": ["id"],
+    "properties":{
+        "id":{"type":"string"}        
+    },
+    "title":"RealizarPagamento"
+})
+}
+
+resource "aws_api_gateway_request_validator" "validate_realizar_pagamento_post" {
+  name                        = "validate_realizar_pagamento_post"
+  rest_api_id                 = aws_api_gateway_rest_api.parquimetro_api.id
+  validate_request_body       = true
+  validate_request_parameters = false
+}
+
+
+resource "aws_api_gateway_method" "parking_realizar_pagamento_post_method" {
+  rest_api_id   = aws_api_gateway_rest_api.parquimetro_api.id
+  resource_id   = aws_api_gateway_resource.realizar_pagamento_resource.id
+  http_method   = "POST"
+  authorization = "NONE"
+  request_models = {
+    "application/json" = aws_api_gateway_model.parking_realizar_pagamento_model.name
+  }
+ request_validator_id = aws_api_gateway_request_validator.validate_realizar_pagamento_post.id
+}
+
+
+resource "aws_api_gateway_integration" "integration_realizar_pagamento" {
+  rest_api_id             = aws_api_gateway_rest_api.parquimetro_api.id
+  resource_id             = aws_api_gateway_resource.realizar_pagamento_resource.id
+  http_method             = aws_api_gateway_method.parking_realizar_pagamento_post_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.lambda_parking_realizar_pagamento.invoke_arn
+}
+
+resource "aws_lambda_permission" "apigw_lambda_realizar_pagamento" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_parking_realizar_pagamento.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn = "${aws_api_gateway_rest_api.parquimetro_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_function" "lambda_parking_realizar_pagamento" {
+  function_name = "lambda-parking-realizar-pagamento"
+  handler       = "com.fiap.techChallenge3.registroPagamentoSQS.SQSPublisher::handleRequest"
+  runtime       = "java17"
+  role          = aws_iam_role.lambda_role_write_to_sqs.arn
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/registrarPagamentoFilaSQS/target/registroPagamentoSQS-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
+  memory_size   = 256
+  timeout       = 30
+  environment {
+    variables = {
+      SQS_QUEUE_URL = aws_sqs_queue.park_pagamento_queue.id
+    }
+  }
+}
+
+
+resource "aws_sqs_queue" "park_pagamento_queue" {
+  name                       = "registro-pagamento-estacionamento-queue"
+  delay_seconds              = 90
+  max_message_size           = 4096
+  message_retention_seconds  = 86400 # 1 dia
+  visibility_timeout_seconds = 30
+  fifo_queue                 = false
 }
 
