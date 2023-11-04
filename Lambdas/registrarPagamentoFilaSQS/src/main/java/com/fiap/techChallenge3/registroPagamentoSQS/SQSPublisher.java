@@ -43,7 +43,7 @@ public class SQSPublisher implements RequestStreamHandler{
 
             Gson gson = new Gson();
             RegistroPagamentoModel registroEstacionamentoModel = gson.fromJson(messageBody, RegistroPagamentoModel.class);
-            registroEstacionamentoModel.setId(UUID.randomUUID().toString());
+
 
 
 
