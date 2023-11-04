@@ -249,7 +249,6 @@ resource "aws_dynamodb_table" "registro-estacionamento-table" {
   read_capacity  = 10
   write_capacity = 10
   hash_key       = "TicketId"
-  range_key      = "PagamentoRealizado"
   stream_enabled = true
   stream_view_type = "NEW_IMAGE"
 
@@ -258,30 +257,12 @@ resource "aws_dynamodb_table" "registro-estacionamento-table" {
     type = "S"
   }
 
-  attribute {
-    name = "PagamentoRealizado"
-    type = "S"
-  }
-
-  attribute {
-    name = "DataEntrada"
-    type = "S"
-  }
 
   ttl {
     attribute_name = "TimeToExist"
     enabled        = false
   }
 
-global_secondary_index {
-  name               = "estacionamento-por-status-data-indice"
-  hash_key           = "PagamentoRealizado"
-  range_key          = "DataEntrada"
-  write_capacity     = 10
-  read_capacity      = 10
-  projection_type    = "INCLUDE"
-  non_key_attributes = ["UserId"]
-}
 }
 
 
@@ -506,5 +487,23 @@ resource "aws_sqs_queue" "park_pagamento_queue" {
   message_retention_seconds  = 86400 # 1 dia
   visibility_timeout_seconds = 30
   fifo_queue                 = false
+}
+
+
+resource "aws_lambda_function" "lambda_read_from_sqs_pagamento" {
+  function_name = "lambda-read-from-sqs-pagamento"
+  handler       = "com.fiap.techChallenge3.listenerSQSWriteDynamo.SQSListener::handleRequest"
+  runtime       = "java17"
+  role          = aws_iam_role.lambda_role_write_to_sqs.arn
+  filename      = "/home/felipe/estudos/fiap/TechChallenge3/TechChallenge3-RegistrarInicioEstacionamento/Lambdas/listenerSQSWriteDynamoLambdaPagamento/target/ListenerSQSWriteDynamoPagamento-1.0-SNAPSHOT.jar" # trocar pelo caminho do jar da lambda
+  memory_size   = 256
+  timeout       = 30
+}
+
+resource "aws_lambda_event_source_mapping" "sqs_read_event_source_mapping_pagamento" {
+  event_source_arn = aws_sqs_queue.park_pagamento_queue.arn
+  enabled          = true
+  function_name    = aws_lambda_function.lambda_read_from_sqs_pagamento.arn
+  batch_size       = 1
 }
 
