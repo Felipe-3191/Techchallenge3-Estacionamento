@@ -26,7 +26,9 @@ Um **relatório PDF** que contenha as seguintes informações:
    - [Repositório Terraform + Lambdas](https://github.com/Felipe-3191/Techchallenge3-Estacionamento)
 2. Documentação Técnica
 3. Um Relatório Técnico descrevendo as tecnologias e ferramentas utilizadas, os desafios encontrados durante o desenvolvimento e as soluções implementadas para resolvê-los.
-   
+4. Para facilitar a demonstração de funcionamento da parte provisionada na nuvem, gravamos um vídeo em duas partes que pode ser acessado através desses links: 
+   - [Parte 1](https://www.youtube.com/watch?v=dmy1nmNOqQw&ab_channel=Felipesantos)
+   - [Parte 2](https://www.youtube.com/watch?v=MSDLe0Jj1TQ&ab_channel=Felipesantos)   
 
 
 
@@ -47,6 +49,9 @@ Todos os registros são inseridos na tabela Estacionamento do DynamoDB (criada a
 
 O projeto do Terraform em conjunto com as Lambdas implementadas pode ser encontrada nesse repositório: 
 [Repositório Terraform + Lambdas](https://github.com/Felipe-3191/Techchallenge3-Estacionamento)
+   Para facilitar a demonstração de funcionamento da parte provisionada na nuvem, gravamos um vídeo em duas partes que pode ser acessado através desses links: 
+   - [Parte 1](https://www.youtube.com/watch?v=dmy1nmNOqQw&ab_channel=Felipesantos)
+   - [Parte 2](https://www.youtube.com/watch?v=MSDLe0Jj1TQ&ab_channel=Felipesantos)
 
 O Terraform acima provê os recursos bem como os papéis e roles necessários para acessá-los
 
